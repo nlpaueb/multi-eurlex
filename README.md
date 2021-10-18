@@ -11,10 +11,10 @@ This is the code used for the experiments described in the following paper:
 ## Requirements:
 
 * tensorflow==2.3.1
-* tensorflow-addons==0.5
+* tensorflow-addons==0.11.2
 * transformers==4.3.3
 * tokenizers==0.10.1
-* scipy==1.6.1
+* scipy==1.5.4
 * torch==1.7.1
 * tqdm==4.43.0
 * cudatoolkit==10.1.243 (for GPU acceleration)
@@ -65,4 +65,8 @@ You can run experiments by simply calling:
 ```
 python trainer.py --bert_path 'xlm-roberta-base' --use_adapters True --train_lang 'en' --label_level 'level_1'
 ```
+
+### Credits
+
+Thanks to @Essex97 for pointing out minor bugs in the codebase.
 

@@ -16,11 +16,14 @@ class SampleGenerator(tf.keras.utils.Sequence):
                  batch_size: int = 8,
                  shuffle: bool = True,
                  max_document_length: int = 512):
-        self.documents = dataset
+        self.documents = [{'celex_id': dataset['celex_id'][k],
+                           'text': dataset['text'][k],
+                           'labels': dataset['labels'][k]}
+                          for k in range(len(dataset['text']))]
         self.batch_size = batch_size
         self.lang = lang
         self.label_index = label_index
-        self.indices = np.arange(len(dataset))
+        self.indices = np.arange(len(self.documents))
         self.max_document_length = max_document_length
         self.shuffle = shuffle
         self.multilingual_train = multilingual_train
@@ -43,7 +46,7 @@ class SampleGenerator(tf.keras.utils.Sequence):
         for i, document in enumerate(documents):
             for j, concept_id in enumerate(sorted(document['labels'])):
                 if concept_id in self.label_index:
-                    y[i][self.label_index[concept_id]] = 1
+                    y[i][concept_id] = 1
         return [x, y]
 
     def __getitem__(self, index):

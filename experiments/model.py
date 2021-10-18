@@ -160,9 +160,8 @@ class TFT5LayerFF(tf.keras.layers.Layer):
 
 class Classifier(tf.keras.Model):
 
-    def __init__(self, bert_model_path, num_labels, mode, *inputs, **kwargs):
+    def __init__(self, bert_model_path, num_labels, *inputs, **kwargs):
         super(Classifier, self).__init__(name="BertClassifier")
-        self.mode = mode
         if 'bert' in bert_model_path or bert_model_path in NATIVE_BERT.values():
             self.bert = TFAutoModel.from_pretrained(bert_model_path, from_pt=True)
         else:
@@ -171,7 +170,7 @@ class Classifier(tf.keras.Model):
         self.classifier = tf.keras.layers.Dense(
             num_labels,
             kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.02),
-            use_bias=False if self.mode == 'text-generation' else True,
+            use_bias=True,
             name="classifier")
 
     def call(self, inputs, **kwargs):

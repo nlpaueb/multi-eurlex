@@ -35,11 +35,12 @@ cli = click.Group()
 @click.option('--max_document_length', default=512)
 @click.option('--monitor', default='val_rp')
 @click.option('--train_lang', default='en')
-@click.option('--train_langs', default=['en'])
-@click.option('--eval_langs', default=['en', 'da', 'de', 'nl', 'sv', 'bg', 'cs', 'hr', 'pl', 'sk', 'sl', 'es',
-                                       'fr', 'it', 'pt', 'ro', 'et', 'fi', 'hu', 'lt', 'lv', 'el', 'mt'])
+@click.option('--train_langs', multiple=True, default=['en'])
+@click.option('--eval_langs', multiple=True,
+              default=['en', 'da', 'de', 'nl', 'sv', 'bg', 'cs', 'hr', 'pl', 'sk', 'sl', 'es',
+                       'fr', 'it', 'pt', 'ro', 'et', 'fi', 'hu', 'lt', 'lv', 'el', 'mt'])
 @click.option('--label_level', default='level_3')
-@click.option('--train_sample', default=10)
+@click.option('--train_samples', default=10)
 @click.option('--eval_samples', default=10)
 def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_frozen_layers, epochs, batch_size,
           learning_rate, label_smoothing, monitor, train_lang, train_langs, eval_langs, label_level, multilingual_train,
@@ -56,7 +57,7 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
         train_langs = eval_langs
 
     with open(os.path.join(DATA_DIR, 'eurovoc_concepts.json')) as file:
-        label_index = {concept: idx for idx, concept in enumerate(json.load(file)[label_level])}
+        label_index = {idx: concept for idx, concept in enumerate(json.load(file)[label_level])}
 
     # Load native bert
     if native_bert in NATIVE_BERT:
@@ -105,12 +106,13 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
                                       bert_model_path=bert_path, batch_size=batch_size, shuffle=True,
                                       multilingual_train=multilingual_train, max_document_length=max_document_length)
 
-    LOGGER.info(f'{len(eval_dataset["dev"])} documents will be used for development')
-    dev_generator = SampleGenerator(dataset=eval_dataset['dev'][:eval_samples if eval_samples else len(eval_dataset)],
-                                    label_index=label_index,
-                                    lang=train_langs if multilingual_train else train_lang,
-                                    bert_model_path=bert_path, batch_size=batch_size, shuffle=False,
-                                    multilingual_train=multilingual_train, max_document_length=max_document_length)
+    LOGGER.info(f'{len(eval_dataset["validation"])} documents will be used for development')
+    dev_generator = SampleGenerator(
+        dataset=eval_dataset['validation'][:eval_samples if eval_samples else len(eval_dataset)],
+        label_index=label_index,
+        lang=train_langs if multilingual_train else train_lang,
+        bert_model_path=bert_path, batch_size=batch_size, shuffle=False,
+        multilingual_train=multilingual_train, max_document_length=max_document_length)
     # Instantiate Model
     mirrored_strategy = tf.distribute.MirroredStrategy()
     with mirrored_strategy.scope():
@@ -126,22 +128,22 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
 
         classifier = Classifier(bert_model_path=bert_path, num_labels=len(label_index))
         classifier.adapt_model(use_adapters=use_adapters,
-                                    use_ln=use_ln,
-                                    bottleneck_size=bottleneck_size,
-                                    num_frozen_layers=n_frozen_layers)
+                               use_ln=use_ln,
+                               bottleneck_size=bottleneck_size,
+                               num_frozen_layers=n_frozen_layers)
 
         classifier.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-                                loss=tf.keras.losses.BinaryCrossentropy(from_logits=True,
-                                                                        label_smoothing=label_smoothing),
-                                metrics=[monitor_metric])
+                           loss=tf.keras.losses.BinaryCrossentropy(from_logits=True,
+                                                                   label_smoothing=label_smoothing),
+                           metrics=[monitor_metric])
         classifier(tf.zeros((1, 10), dtype='int32'))
         classifier.summary(print_fn=LOGGER.info, line_length=100)
 
     # Train model
     start_training_time = time.time()
     history = classifier.fit(train_generator, validation_data=dev_generator,
-                                  epochs=epochs,
-                                  callbacks=[tf.keras.callbacks.EarlyStopping(
+                             epochs=epochs,
+                             callbacks=[tf.keras.callbacks.EarlyStopping(
                                       patience=5, monitor=monitor, mode=monitor_mode, restore_best_weights=True)])
     end_training_time = time.time()
 
@@ -152,12 +154,12 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
     if monitor == 'val_loss':
         LOGGER.info('           \tLoss   \t\tVal Loss')
         for n_epoch, _ in enumerate(history.history['loss']):
-            LOGGER.info(f'EPOCH #{n_epoch+1:<2}: \t{history.history["loss"][n_epoch]:.5f}'
+            LOGGER.info(f'EPOCH #{n_epoch + 1:<2}: \t{history.history["loss"][n_epoch]:.5f}'
                         f'\t\t{history.history["val_loss"][n_epoch]:.5f}')
     elif monitor == 'val_rp':
         LOGGER.info('           \tLoss   \t\tVal Loss\tRP     \t\tVal RP')
         for n_epoch, _ in enumerate(history.history['loss']):
-            LOGGER.info(f'EPOCH #{n_epoch+1:<2}: \t{history.history["loss"][n_epoch]:.5f}'
+            LOGGER.info(f'EPOCH #{n_epoch + 1:<2}: \t{history.history["loss"][n_epoch]:.5f}'
                         f'\t\t{history.history["val_loss"][n_epoch]:.5f}'
                         f'\t\t{history.history["rp"][n_epoch]:.5f}'
                         f'\t\t{history.history["val_rp"][n_epoch]:.5f}')
@@ -170,16 +172,17 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
     LOGGER.info('-' * 100)
 
     # Re-instantiate development generator
-    dev_generator = SampleGenerator(dataset=eval_dataset["dev"][:eval_samples if eval_samples else len(eval_dataset)],
-                                    label_index=label_index, lang=train_lang,
-                                    bert_model_path=bert_path, batch_size=batch_size, shuffle=False,
-                                    max_document_length=max_document_length)
+    dev_generator = SampleGenerator(
+        dataset=eval_dataset["validation"][:eval_samples if eval_samples else len(eval_dataset)],
+        label_index=label_index, lang=train_lang,
+        bert_model_path=bert_path, batch_size=batch_size, shuffle=False,
+        max_document_length=max_document_length)
 
     for lang_code in eval_langs:
         # Set target language
         dev_generator.lang = lang_code
         # Initialize score matrices
-        n_documents = sum([1 for document in dev_generator.documents if document.text[lang_code] is not None])
+        n_documents = sum([1 for document in dev_generator.documents if document['text'][lang_code] is not None])
         y_true = np.zeros((n_documents, len(label_index)), dtype=np.float32)
         y_pred = np.zeros((n_documents, len(label_index)), dtype=np.float32)
         count = 0
@@ -193,11 +196,11 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
             count += LEN_BATCH
         # Log evaluation scores
         y_pred = expit(y_pred)
-        scores = f'"{lang_code}": R-Precision: {mean_rprecision(y_true, y_pred)[0]*100:2.2f}\t'
+        scores = f'"{lang_code}": R-Precision: {mean_rprecision(y_true, y_pred)[0] * 100:2.2f}\t'
         for k in range(1, 6):
-            scores += f'NDCG@{k}: {mean_ndcg_score(y_true, y_pred, k=k)[0]*100:2.2f}\t'
+            scores += f'NDCG@{k}: {mean_ndcg_score(y_true, y_pred, k=k)[0] * 100:2.2f}\t'
         for k in range(1, 6):
-            scores += f'R@{k}: {mean_recall_k(y_true, y_pred, k=k)[0]*100:2.2f}\t'
+            scores += f'R@{k}: {mean_recall_k(y_true, y_pred, k=k)[0] * 100:2.2f}\t'
         LOGGER.info(scores)
 
     LOGGER.info('-' * 100)
@@ -213,7 +216,7 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
         # Set target language
         test_generator.lang = lang_code
         # Initialize score matrices
-        n_documents = sum([1 for document in test_generator.documents if document.text[lang_code] is not None])
+        n_documents = sum([1 for document in test_generator.documents if document['text'][lang_code] is not None])
         y_true = np.zeros((n_documents, len(label_index)), dtype=np.float32)
         y_pred = np.zeros((n_documents, len(label_index)), dtype=np.float32)
         count = 0
