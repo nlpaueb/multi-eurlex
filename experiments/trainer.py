@@ -108,7 +108,7 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
 
     LOGGER.info(f'{len(eval_dataset["validation"])} documents will be used for development')
     dev_generator = SampleGenerator(
-        dataset=eval_dataset['validation'][:eval_samples if eval_samples else len(eval_dataset)],
+        dataset=eval_dataset['validation'][:eval_samples if eval_samples else len(eval_dataset['validation'])],
         label_index=label_index,
         lang=train_langs if multilingual_train else train_lang,
         bert_model_path=bert_path, batch_size=batch_size, shuffle=False,
@@ -173,7 +173,7 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
 
     # Re-instantiate development generator
     dev_generator = SampleGenerator(
-        dataset=eval_dataset["validation"][:eval_samples if eval_samples else len(eval_dataset)],
+        dataset=eval_dataset['validation'][:eval_samples if eval_samples else len(eval_dataset['validation'])],
         label_index=label_index, lang=train_lang,
         bert_model_path=bert_path, batch_size=batch_size, shuffle=False,
         max_document_length=max_document_length)
@@ -208,7 +208,7 @@ def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_froze
     LOGGER.info('-' * 100)
 
     # Instantiate test generator
-    test_generator = SampleGenerator(dataset=eval_dataset['test'][:eval_samples if eval_samples else len(eval_dataset)],
+    test_generator = SampleGenerator(dataset=eval_dataset['test'][:eval_samples if eval_samples else len(eval_dataset['test'])],
                                      label_index=label_index, lang=train_lang,
                                      bert_model_path=bert_path, batch_size=batch_size, shuffle=False,
                                      max_document_length=max_document_length)
