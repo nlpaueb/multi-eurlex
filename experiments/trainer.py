@@ -40,8 +40,8 @@ cli = click.Group()
               default=['en', 'da', 'de', 'nl', 'sv', 'bg', 'cs', 'hr', 'pl', 'sk', 'sl', 'es',
                        'fr', 'it', 'pt', 'ro', 'et', 'fi', 'hu', 'lt', 'lv', 'el', 'mt'])
 @click.option('--label_level', default='level_3')
-@click.option('--train_samples', default=10)
-@click.option('--eval_samples', default=10)
+@click.option('--train_samples', default=None)
+@click.option('--eval_samples', default=None)
 def train(bert_path, native_bert, use_adapters, use_ln, bottleneck_size, n_frozen_layers, epochs, batch_size,
           learning_rate, label_smoothing, monitor, train_lang, train_langs, eval_langs, label_level, multilingual_train,
           max_document_length, train_samples, eval_samples):
