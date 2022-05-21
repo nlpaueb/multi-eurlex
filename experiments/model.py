@@ -183,23 +183,24 @@ class Classifier(tf.keras.Model):
         return output
 
     def adapt_model(self, num_frozen_layers=None, bottleneck_size=256, use_adapters=False, use_ln=False):
-        if self.bert.config.model_type in ['xlm-roberta', 'roberta']:
-            self.adapt_model_roberta(num_frozen_layers=num_frozen_layers,
-                                     bottleneck_size=bottleneck_size,
-                                     use_adapters=use_adapters,
-                                     use_ln=use_ln)
-        elif self.bert.config.model_type == 'bert':
-            self.adapt_model_bert(num_frozen_layers=num_frozen_layers,
-                                  bottleneck_size=bottleneck_size,
-                                  use_adapters=use_adapters,
-                                  use_ln=use_ln)
-        elif self.bert.config.model_type == 'mt5':
-            self.adapt_model_t5(num_frozen_layers=num_frozen_layers,
-                                bottleneck_size=bottleneck_size,
-                                use_adapters=use_adapters,
-                                use_ln=use_ln)
-        else:
-            raise NotImplementedError(f'Model type {self.bert.config.model_type} is not supported for adaptation')
+        if num_frozen_layers or use_adapters or use_ln:
+            if self.bert.config.model_type in ['xlm-roberta', 'roberta']:
+                self.adapt_model_roberta(num_frozen_layers=num_frozen_layers,
+                                         bottleneck_size=bottleneck_size,
+                                         use_adapters=use_adapters,
+                                         use_ln=use_ln)
+            elif self.bert.config.model_type == 'bert':
+                self.adapt_model_bert(num_frozen_layers=num_frozen_layers,
+                                      bottleneck_size=bottleneck_size,
+                                      use_adapters=use_adapters,
+                                      use_ln=use_ln)
+            elif self.bert.config.model_type == 'mt5':
+                self.adapt_model_t5(num_frozen_layers=num_frozen_layers,
+                                    bottleneck_size=bottleneck_size,
+                                    use_adapters=use_adapters,
+                                    use_ln=use_ln)
+            else:
+                raise NotImplementedError(f'Model type {self.bert.config.model_type} is not supported for adaptation')
 
     def adapt_model_bert(self, num_frozen_layers=None, bottleneck_size=256, use_adapters=False, use_ln=False):
         if use_adapters:
