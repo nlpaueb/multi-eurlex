@@ -15,18 +15,19 @@ class SampleGenerator(tf.keras.utils.Sequence):
                  multilingual_train: bool = False,
                  batch_size: int = 8,
                  shuffle: bool = True,
-                 max_document_length: int = 512):
-        self.documents = [{'celex_id': dataset['celex_id'][k],
-                           'text': dataset['text'][k],
-                           'labels': dataset['labels'][k]}
-                          for k in range(len(dataset['text']))]
+                 max_document_length: int = 512,
+                 scoring: bool = False,
+                 student: bool = False):
+        self.student = student
+        self.documents = dataset
         self.batch_size = batch_size
         self.lang = lang
         self.label_index = label_index
-        self.indices = np.arange(len(self.documents))
+        self.indices = np.arange(len(dataset))
         self.max_document_length = max_document_length
         self.shuffle = shuffle
         self.multilingual_train = multilingual_train
+        self.scoring = scoring
         if self.shuffle:
             np.random.shuffle(self.indices)
         self.tokenizer = AutoTokenizer.from_pretrained(bert_model_path)
@@ -38,15 +39,26 @@ class SampleGenerator(tf.keras.utils.Sequence):
     def vectorize_data(self, documents, special_token=''):
         x = np.asarray(self.tokenizer.batch_encode_plus(
             [special_token + document['text'][self.lang if not self.multilingual_train else
-            random.choice([lang for lang in document['text'] if document['text'][lang] is not None and lang in self.lang])] for document in documents],
+            random.choice([lang for lang in document['text'] if lang in self.lang and
+                           document['text'][lang] is not None])] for document in documents],
             max_length=self.max_document_length, padding='max_length',
             truncation=True)['input_ids'],
                        dtype=np.int32)
         y = np.zeros((len(documents), len(self.label_index)), dtype=np.float32)
-        for i, document in enumerate(documents):
-            for j, concept_id in enumerate(sorted(document['labels'])):
-                if concept_id in self.label_index:
-                    y[i][concept_id] = 1
+        if self.student:
+            for i, document in enumerate(documents):
+                try:
+                    y[i, :] = document['scores']  # Soft labels
+                except TypeError:
+                    y[i, :] = document['scores']['en']
+        else:
+            if self.scoring:
+                pass
+            else:
+                for i, document in enumerate(documents):
+                    for j, concept_id in enumerate(sorted(document['labels'])):
+                        if concept_id in self.label_index:
+                            y[i][self.label_index[concept_id]] = 1
         return [x, y]
 
     def __getitem__(self, index):
@@ -64,7 +76,10 @@ class SampleGenerator(tf.keras.utils.Sequence):
             return [], []
         x_batch, y_batch = self.vectorize_data(valid_docs, special_token='<extra_id_0>'
                                                if 'mt5' in self.tokenizer.name_or_path else '')
-        return x_batch, y_batch
+        if self.scoring:
+            return x_batch, documents
+        else:
+            return x_batch, y_batch
 
     def on_epoch_end(self):
         """Updates indexes after each epoch"""

@@ -1,12 +1,11 @@
-# Multi-EURLEX
+# Un-parallel Multi-EURLEX (incl. Translations)
 
-## MultiEURLEX - A multi-lingual and multi-label legal document classification dataset for zero-shot cross-lingual transfer
+## Realistic Zero-Shot Cross-Lingual Transfer in Legal Topic Classification
 
 This is the code used for the experiments described in the following paper:
 
 
-> I. Chalkidis, M. Fergadiotis, and I. Androutsopoulos, "MultiEURLEX - A multi-lingual and multi-label legal document classification dataset for zero-shot cross-lingual transfer". Proceedings of the 2021 Conference on Empirical Methods
-               in Natural Language Processing, Punta Cana, Dominican Republic, 2021 (xxx)
+>Stratos Xenouleas, Alexia Tsoukara, Giannis Panagiotakis, Ilias Chalkidis, and Ion Androutsopoulos. Realistic Zero-Shot Cross-Lingual Transfer in Legal Topic Classification. Proceedings of 12th Hellenic Conference on Artificial Intelligence (SETN 2022). Corfu, Greece. 2022
 
 ## Requirements:
 
@@ -30,12 +29,12 @@ pip install -r requirements.txt
 
 ### Download dataset (MultiEURLEX):
 
-The dataset is hosted and been described in detail in the Hugging Face Datasets (https://huggingface.co/datasets/multi_eurlex). It is automatically downloaded and used by the Trainer. 
+The dataset is hosted and been described in detail in the Hugging Face Datasets (https://huggingface.co/datasets/nlpaueb/multi_eurlex). It is automatically downloaded and used by the Trainer. 
 If you want to review and familiarize your self with the dataset, you can download it usingthe following Python code:
 
 ```python
 from datasets import load_dataset
-dataset = load_dataset('multi_eurlex', languages='all_languages')
+dataset = load_dataset('nlpaueb/multi_eurlex', languages=['en', 'en2de', 'en2fr', 'en2el'])
 ```
 
 ### Train a model:
@@ -52,13 +51,13 @@ The following configuration (command-line) arguments can be used:
 * **'epochs'** (default=70) The number of the maximum training epochs (Early stopping with patience 5 is used by default).
 * **'batch_size'** (default=8) The number of the samples in a single batch.
 * **'learning_rate'** (default=3e-5) The initial learning rate to be used by the Adam optimizer.
-* **'label_smoothing'** (default=0.0) The rate of label smoothing (Szegedy  et  al.,2016).
+* **'label_smoothing'** (default=0.2) The rate of label smoothing (Szegedy  et  al.,2016).
 * **'max_document_length'** (default=512) The maximum length of tokens to be considered per document.
 * **'monitor'** (default='val_rp') The score to be monitored for early stopping ('val_rp' or 'val_loss')
 * **'train_lang'** (default='en') The ISO code of the training language (e.g., 'en') in a *one-to-many* setting.
 * **'train_langs'** (default=['en']) The list of languages to be used for fine-tuning, in *many-to-one* setting.
 * **'eval_langs'** (default='all') The list of languages to be used for evaluation.
-* **'label_level'** (default='level_3') The level of EUROVOC (e.g., 'level_1', 'level_2', 'level_3', 'all') used for the classification task.
+* **'label_level'** (default='level_2') The level of EUROVOC (e.g., 'level_1', 'level_2', 'level_3', 'all') used for the classification task.
 
 You can run experiments by simply calling:
 
@@ -68,5 +67,5 @@ python trainer.py --bert_path 'xlm-roberta-base' --use_adapters True --train_lan
 
 ### Credits
 
-Thanks to @Essex97 for pointing out minor bugs in the codebase.
+Thanks to @Essex97 for expanding the codebase.
 
